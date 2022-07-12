@@ -6,13 +6,12 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/chromedp/cdproto/browser"
 	"github.com/chromedp/chromedp"
 )
-
 
 type crawler struct {
 	collectionTimeout time.Duration
@@ -50,29 +49,43 @@ func (c crawler) crawl() ([]string, error) {
 	// Contracheque
 	log.Printf("Realizando seleção (%s/%s)...", c.month, c.year)
 	if err := c.abreCaixaDialogo(ctx, "contra"); err != nil {
-		log.Fatalf("Erro no setup:%v", err)
+		if err.Error() == "could not set value on node 416" {
+			log.Printf("Contracheque não disponível")
+			os.Exit(4)
+		} else {
+			log.Fatalf("Erro no setup:%v", err)
+		}
 	}
-	log.Printf("Seleção realizada com sucesso!\n")
-	cqFname := c.downloadFilePath("contracheque")
-	log.Printf("Fazendo download do contracheque (%s)...", cqFname)
-	if err := c.exportaPlanilha(ctx, cqFname); err != nil {
-		log.Fatalf("Erro fazendo download do contracheque: %v", err)
+	if err != nil {
+		log.Printf("Seleção realizada com sucesso!\n")
+		cqFname := c.downloadFilePath("contracheque")
+		log.Printf("Fazendo download do contracheque (%s)...", cqFname)
+		if err := c.exportaPlanilha(ctx, cqFname); err != nil {
+			log.Fatalf("Erro fazendo download do contracheque: %v", err)
+		}
+		log.Printf("Download realizado com sucesso!\n")
 	}
-	log.Printf("Download realizado com sucesso!\n")
 
 	// Indenizações
 	if c.year != "2018" {
 		log.Printf("Realizando seleção (%s/%s)...", c.month, c.year)
 		if err := c.abreCaixaDialogo(ctx, "inde"); err != nil {
-			log.Fatalf("Erro no setup:%v", err)
+			if err.Error() == "could not set value on node 416" {
+				log.Printf("Indenizações não disponíveis")
+				os.Exit(4)
+			} else {
+				log.Fatalf("Erro no setup:%v", err)
+			}
 		}
-		log.Printf("Seleção realizada com sucesso!\n")
-		iFname := c.downloadFilePath("indenizatorias")
-		log.Printf("Fazendo download das indenizações (%s)...", iFname)
-		if err := c.exportaPlanilha(ctx, iFname); err != nil {
-			log.Fatalf("Erro fazendo download dos indenizações: %v", err)
+		if err != nil {
+			log.Printf("Seleção realizada com sucesso!\n")
+			iFname := c.downloadFilePath("indenizatorias")
+			log.Printf("Fazendo download das indenizações (%s)...", iFname)
+			if err := c.exportaPlanilha(ctx, iFname); err != nil {
+				log.Fatalf("Erro fazendo download dos indenizações: %v", err)
+			}
+			log.Printf("Download realizado com sucesso!\n")
 		}
-		log.Printf("Download realizado com sucesso!\n")
 
 		return []string{cqFname, iFname}, nil
 	}
@@ -88,7 +101,7 @@ func (c crawler) downloadFilePath(prefix string) string {
 func (c crawler) abreCaixaDialogo(ctx context.Context, tipo string) error {
 	var baseURL string
 	var selectYear string
-	if tipo == "contra"{
+	if tipo == "contra" {
 		baseURL = "http://www.mpap.mp.br/transparencia/index.php?pg=consulta_folha_membros_ativos"
 		selectYear = `//select[@id="ano"]`
 	} else {
@@ -111,7 +124,7 @@ func (c crawler) abreCaixaDialogo(ctx context.Context, tipo string) error {
 		// Busca
 		chromedp.Click(`//*[@id="enviar"]`, chromedp.BySearch, chromedp.NodeVisible),
 		chromedp.Sleep(c.timeBetweenSteps),
-		
+
 		// Altera o diretório de download
 		browser.SetDownloadBehavior(browser.SetDownloadBehaviorBehaviorAllowAndName).
 			WithDownloadPath(c.output).
@@ -123,18 +136,18 @@ func (c crawler) abreCaixaDialogo(ctx context.Context, tipo string) error {
 func (c crawler) exportaPlanilha(ctx context.Context, fName string) error {
 	if strings.Contains(fName, "contracheque") {
 		chromedp.Run(ctx,
-			// Clica no botão de download 
+			// Clica no botão de download
 			chromedp.Click(`/html/body/div[1]/center/div/fieldset/div[3]/form/button[2]`, chromedp.BySearch, chromedp.NodeVisible),
 			chromedp.Sleep(c.timeBetweenSteps),
 		)
 	} else {
 		chromedp.Run(ctx,
-			// Clica no botão de download 
+			// Clica no botão de download
 			chromedp.Click(`/html/body/div[1]/center/div/fieldset/div/form/button[2]`, chromedp.BySearch, chromedp.NodeVisible),
 			chromedp.Sleep(c.timeBetweenSteps),
 		)
 	}
-	
+
 	if err := nomeiaDownload(c.output, fName); err != nil {
 		return fmt.Errorf("erro renomeando arquivo (%s): %v", fName, err)
 	}
