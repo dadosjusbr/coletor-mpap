@@ -46,19 +46,25 @@ func (c crawler) crawl() ([]string, error) {
 	// NOTA IMPORTANTE: os prefixos dos nomes dos arquivos tem que ser igual
 	// ao esperado no parser MPAP.
 
+	cqFname := "Contracheque não foi baixado"
+	iFname := "Indenizações não foram baixadas"
+
 	// Contracheque
+
+	var erro error
+	erro = nil
 	log.Printf("Realizando seleção (%s/%s)...", c.month, c.year)
 	if err := c.abreCaixaDialogo(ctx, "contra"); err != nil {
-		if err.Error() == "could not set value on node 416" {
+		if strings.Contains(err.Error(), "could not set value on node") {
 			log.Printf("Contracheque não disponível")
-			os.Exit(4)
+			erro = err
 		} else {
 			log.Fatalf("Erro no setup:%v", err)
 		}
 	}
-	if err != nil {
+	if erro == nil {
 		log.Printf("Seleção realizada com sucesso!\n")
-		cqFname := c.downloadFilePath("contracheque")
+		cqFname = c.downloadFilePath("contracheque")
 		log.Printf("Fazendo download do contracheque (%s)...", cqFname)
 		if err := c.exportaPlanilha(ctx, cqFname); err != nil {
 			log.Fatalf("Erro fazendo download do contracheque: %v", err)
@@ -67,19 +73,20 @@ func (c crawler) crawl() ([]string, error) {
 	}
 
 	// Indenizações
+	erro = nil
 	if c.year != "2018" {
 		log.Printf("Realizando seleção (%s/%s)...", c.month, c.year)
 		if err := c.abreCaixaDialogo(ctx, "inde"); err != nil {
-			if err.Error() == "could not set value on node 416" {
+			if strings.Contains(err.Error(), "could not set value on node") {
 				log.Printf("Indenizações não disponíveis")
-				os.Exit(4)
+				erro = err
 			} else {
 				log.Fatalf("Erro no setup:%v", err)
 			}
 		}
-		if err != nil {
+		if erro == nil {
 			log.Printf("Seleção realizada com sucesso!\n")
-			iFname := c.downloadFilePath("indenizatorias")
+			iFname = c.downloadFilePath("indenizatorias")
 			log.Printf("Fazendo download das indenizações (%s)...", iFname)
 			if err := c.exportaPlanilha(ctx, iFname); err != nil {
 				log.Fatalf("Erro fazendo download dos indenizações: %v", err)
@@ -87,11 +94,10 @@ func (c crawler) crawl() ([]string, error) {
 			log.Printf("Download realizado com sucesso!\n")
 		}
 
-		return []string{cqFname, iFname}, nil
 	}
 
 	// Retorna caminhos completos dos arquivos baixados.
-	return []string{cqFname}, nil
+	return []string{cqFname, iFname}, nil
 }
 
 func (c crawler) downloadFilePath(prefix string) string {
