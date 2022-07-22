@@ -46,8 +46,8 @@ func (c crawler) crawl() ([]string, error) {
 	// NOTA IMPORTANTE: os prefixos dos nomes dos arquivos tem que ser igual
 	// ao esperado no parser MPAP.
 
-	cqFname := "Contracheque não foi baixado"
-	iFname := "Indenizações não foram baixadas"
+	cqFname := ""
+	iFname := ""
 
 	// Contracheque
 
