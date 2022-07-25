@@ -21,6 +21,10 @@ type crawler struct {
 	output            string
 }
 
+const (
+	STATUS_DATA_UNAVAILABLE = 4
+)
+
 func (c crawler) crawl() ([]string, error) {
 	// Chromedp setup.
 	log.SetOutput(os.Stderr) // Enviando logs para o stderr para não afetar a execução do coletor.
@@ -51,7 +55,8 @@ func (c crawler) crawl() ([]string, error) {
 	log.Printf("Realizando seleção (%s/%s)...", c.month, c.year)
 	if err := c.abreCaixaDialogo(ctx, "contra"); err != nil {
 		if strings.Contains(err.Error(), "could not set value on node") {
-			log.Fatalf("Erro no setup: Contracheque não disponível")
+			fmt.Fprintf(os.Stderr, "Erro no setup: Contracheque não disponível")
+			os.Exit(STATUS_DATA_UNAVAILABLE)
 		} else {
 			log.Fatalf("Erro no setup:%v", err)
 		}
