@@ -16,6 +16,7 @@ import (
 type crawler struct {
 	collectionTimeout time.Duration
 	timeBetweenSteps  time.Duration
+	downloadTimeout   time.Duration
 	year              string
 	month             string
 	output            string
@@ -34,6 +35,7 @@ func (c crawler) crawl() ([]string, error) {
 			chromedp.Flag("headless", true), // mude para false para executar com navegador visível.
 			chromedp.NoSandbox,
 			chromedp.DisableGPU,
+			chromedp.UserAgent("Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Mobile Safari/537.36"),
 		)...,
 	)
 	defer allocCancel()
@@ -108,11 +110,11 @@ func (c crawler) abreCaixaDialogo(ctx context.Context, tipo string) error {
 	var baseURL string
 	var selectYear string
 	if tipo == "contra" {
-		baseURL = "http://www.mpap.mp.br/transparencia/index.php?pg=consulta_folha_membros_ativos"
-		selectYear = `//select[@id="ano"]`
+		baseURL = "https://portal.mpap.mp.br/transparencia/index.php?pg=consulta_folha_membros_ativos"
+		selectYear = `//*[@id="ano"]`
 	} else {
-		baseURL = "https://www.mpap.mp.br/transparencia/index.php?pg=consulta_verbas_indenizatorias"
-		selectYear = `//select[@id="ano_verbas"]`
+		baseURL = "https://portal.mpap.mp.br/transparencia/index.php?pg=consulta_verbas_indenizatorias"
+		selectYear = `//*[@id="ano_verbas"]`
 	}
 
 	return chromedp.Run(ctx,
@@ -124,7 +126,7 @@ func (c crawler) abreCaixaDialogo(ctx context.Context, tipo string) error {
 		chromedp.Sleep(c.timeBetweenSteps),
 
 		// Seleciona mes
-		chromedp.SetValue(`//select[@id="mes"]`, strings.TrimPrefix(c.month, "0"), chromedp.BySearch, chromedp.NodeVisible),
+		chromedp.SetValue(`//*[@id="mes"]`, strings.TrimPrefix(c.month, "0"), chromedp.BySearch, chromedp.NodeVisible),
 		chromedp.Sleep(c.timeBetweenSteps),
 
 		// Busca
@@ -144,13 +146,13 @@ func (c crawler) exportaPlanilha(ctx context.Context, fName string) error {
 		chromedp.Run(ctx,
 			// Clica no botão de download
 			chromedp.Click(`/html/body/div[1]/center/div/fieldset/div[3]/form/button[2]`, chromedp.BySearch, chromedp.NodeVisible),
-			chromedp.Sleep(c.timeBetweenSteps),
+			chromedp.Sleep(c.downloadTimeout),
 		)
 	} else {
 		chromedp.Run(ctx,
 			// Clica no botão de download
 			chromedp.Click(`/html/body/div[1]/center/div/fieldset/div/form/button[2]`, chromedp.BySearch, chromedp.NodeVisible),
-			chromedp.Sleep(c.timeBetweenSteps),
+			chromedp.Sleep(c.downloadTimeout),
 		)
 	}
 
